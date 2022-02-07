@@ -60,8 +60,15 @@ public class SemantiqueVisitor implements ParserVisitor {
 
     @Override
     public Object visit(ASTProgram node, Object data) {
-        node.childrenAccept(this, data);
-        print(String.format("{VAR:%d, WHILE:%d, IF:%d, FOR:%d, OP:%d}", VAR, WHILE, IF, FOR, OP));
+        try {
+            node.childrenAccept(this, data);
+            print(String.format("{VAR:%d, WHILE:%d, IF:%d, FOR:%d, OP:%d}", VAR, WHILE, IF, FOR, OP));
+        }
+        catch (SemantiqueError error){
+            print(error.getMessage());
+        }
+
+
         return null;
     }
 
@@ -88,7 +95,8 @@ public class SemantiqueVisitor implements ParserVisitor {
         }else if(typeName.equals("real")){
             type = VarType.real;
         }
-
+        if(symbolTable.containsKey(varName))
+            throw new SemantiqueError("Invalid declaration... variable "+varName+" already exists");
         symbolTable.put(varName, type);
 
         return null;
@@ -97,7 +105,6 @@ public class SemantiqueVisitor implements ParserVisitor {
     @Override
     public Object visit(ASTListDeclaration node, Object data) {
         VAR++;
-        node.childrenAccept(this, data);
         return null;
     }
 
@@ -110,6 +117,11 @@ public class SemantiqueVisitor implements ParserVisitor {
 
     @Override
     public Object visit(ASTStmt node, Object data) {
+        String varName = ((ASTIdentifier) (node.jjtGetChild(0))).getValue();
+
+        if(!symbolTable.containsKey(varName))
+            throw new SemantiqueError("Invalid use of undefined Identifier "+varName);
+
         node.childrenAccept(this, data);
         return null;
     }
@@ -270,7 +282,6 @@ public class SemantiqueVisitor implements ParserVisitor {
     @Override
     public Object visit(ASTBoolValue node, Object data) {
         node.childrenAccept(this, data);
-//        ((DataStruct) data).type = VarType.bool;
         return null;
     }
 
