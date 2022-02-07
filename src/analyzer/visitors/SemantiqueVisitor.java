@@ -302,3 +302,6 @@ public class SemantiqueVisitor implements ParserVisitor {
         }
     }
 }
+
+//DataStruct ds = new DataStruct();
+//node.jttgetChild(i).jttAccept(this,ds) for i in node.jjtGetNumChildren()
