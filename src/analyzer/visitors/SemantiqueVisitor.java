@@ -62,7 +62,6 @@ public class SemantiqueVisitor implements ParserVisitor {
     public Object visit(ASTProgram node, Object data) {
         node.childrenAccept(this, data);
         print(String.format("{VAR:%d, WHILE:%d, IF:%d, FOR:%d, OP:%d}", VAR, WHILE, IF, FOR, OP));
-
         return null;
     }
 
@@ -73,12 +72,12 @@ public class SemantiqueVisitor implements ParserVisitor {
     @Override
     public Object visit(ASTDeclaration node, Object data) {
         node.childrenAccept(this, data);
-        VAR++;
         return null;
     }
 
     @Override
     public Object visit(ASTNormalDeclaration node, Object data) {
+        VAR++;
         String varName = ((ASTIdentifier) node.jjtGetChild(0)).getValue();
         String typeName = node.getValue();
 
@@ -97,6 +96,7 @@ public class SemantiqueVisitor implements ParserVisitor {
 
     @Override
     public Object visit(ASTListDeclaration node, Object data) {
+        VAR++;
         node.childrenAccept(this, data);
         return null;
     }
@@ -110,7 +110,6 @@ public class SemantiqueVisitor implements ParserVisitor {
 
     @Override
     public Object visit(ASTStmt node, Object data) {
-
         node.childrenAccept(this, data);
         return null;
     }
@@ -122,6 +121,7 @@ public class SemantiqueVisitor implements ParserVisitor {
 
     @Override
     public Object visit(ASTForEachStmt node, Object data) {
+        FOR++;
         node.childrenAccept(this, data);
         return null;
     }
@@ -131,6 +131,7 @@ public class SemantiqueVisitor implements ParserVisitor {
      */
     @Override
     public Object visit(ASTForStmt node, Object data) {
+        FOR++;
         node.childrenAccept(this, data);
         return null;
     }
@@ -149,12 +150,14 @@ public class SemantiqueVisitor implements ParserVisitor {
      */
     @Override
     public Object visit(ASTIfStmt node, Object data) {
+        IF++;
         node.childrenAccept(this, data);
         return null;
     }
 
     @Override
     public Object visit(ASTWhileStmt node, Object data) {
+        WHILE++;
         node.childrenAccept(this, data);
         return null;
     }
@@ -187,6 +190,10 @@ public class SemantiqueVisitor implements ParserVisitor {
         les opérateurs == et != peuvent être utilisé pour les nombres, les réels et les booléens, mais il faut que le type soit le même
         des deux côté de l'égalité/l'inégalité.
         */
+        int nChild = node.jjtGetNumChildren();
+        if(nChild>1)
+            OP += nChild-1;
+        node.childrenAccept(this,data);
         return null;
     }
 
@@ -202,19 +209,22 @@ public class SemantiqueVisitor implements ParserVisitor {
      */
     @Override
     public Object visit(ASTAddExpr node, Object data) {
+        OP += node.getOps().size();
         node.childrenAccept(this, data);
         return null;
     }
 
     @Override
     public Object visit(ASTMulExpr node, Object data) {
+        OP += node.getOps().size();
         node.childrenAccept(this, data);
         return null;
     }
 
     @Override
     public Object visit(ASTBoolExpr node, Object data) {
-        node.childrenAccept(this, data);
+        OP += node.getOps().size();
+        node.childrenAccept(this,data);
         return null;
     }
 
@@ -233,13 +243,15 @@ public class SemantiqueVisitor implements ParserVisitor {
     */
     @Override
     public Object visit(ASTNotExpr node, Object data) {
-        node.childrenAccept(this, data);
+        OP += node.getOps().size();
+        node.childrenAccept(this,data);
         return null;
     }
 
     @Override
     public Object visit(ASTUnaExpr node, Object data) {
-        node.childrenAccept(this, data);
+        OP += node.getOps().size();
+        node.childrenAccept(this,data);
         return null;
     }
 
@@ -258,8 +270,7 @@ public class SemantiqueVisitor implements ParserVisitor {
     @Override
     public Object visit(ASTBoolValue node, Object data) {
         node.childrenAccept(this, data);
-        ((DataStruct) data).type = VarType.bool;
-
+//        ((DataStruct) data).type = VarType.bool;
         return null;
     }
 
