@@ -67,8 +67,6 @@ public class SemantiqueVisitor implements ParserVisitor {
         catch (SemantiqueError error){
             print(error.getMessage());
         }
-
-
         return null;
     }
 
@@ -95,20 +93,20 @@ public class SemantiqueVisitor implements ParserVisitor {
         }else if(typeName.equals("real")){
             type = VarType.real;
         }
-        if(symbolTable.containsKey(varName))
-            throw new SemantiqueError("Invalid declaration... variable "+varName+" already exists");
+        checkInvalidDeclaration(varName);
         symbolTable.put(varName, type);
 
+        node.childrenAccept(this,data);
         return null;
     }
+
 
     @Override
     public Object visit(ASTListDeclaration node, Object data) {
         VAR++;
         String varName = ((ASTIdentifier) node.jjtGetChild(0)).getValue();
         String typeName = node.getValue();
-        if(symbolTable.containsKey(varName))
-            throw new SemantiqueError("Invalid declaration... variable "+varName+" already exists");
+        checkInvalidDeclaration(varName);
 
         VarType type = VarType.listnum;
         if (typeName.equals("listbool")){
@@ -140,19 +138,25 @@ public class SemantiqueVisitor implements ParserVisitor {
      * de vérifier que les variables existent.
      */
 
+
     @Override
     public Object visit(ASTForEachStmt node, Object data) {
         FOR++;
 
-        String varName = ((ASTIdentifier) node.jjtGetChild(1)).getValue();
+        String varNameList = ((ASTIdentifier) node.jjtGetChild(1)).getValue();
+        checkInvalidUseIdentifier(varNameList);
+        checkIfArrayType(varNameList);
 
-        if(!symbolTable.containsKey(varName))
-            throw new SemantiqueError("Invalid use of undefined Identifier "+varName);
+        DataStruct child0Info = goGetChildInfo(node,0);
+        if(child0Info.symbol != null){
+            checkInvalidArrayAssignement(child0Info.symbol,varNameList);
+        }
 
-
-        node.childrenAccept(this, data);
+        node.jjtGetChild(1).jjtAccept(this, data);
+        node.jjtGetChild(2).jjtAccept(this, data);
         return null;
     }
+
 
     /*
     Ici faites attention!! Lisez la grammaire, c'est votre meilleur ami :)
@@ -160,6 +164,7 @@ public class SemantiqueVisitor implements ParserVisitor {
     @Override
     public Object visit(ASTForStmt node, Object data) {
         FOR++;
+        checkCondition(node,data,1);
         node.childrenAccept(this, data);
         return null;
     }
@@ -179,14 +184,16 @@ public class SemantiqueVisitor implements ParserVisitor {
     @Override
     public Object visit(ASTIfStmt node, Object data) {
         IF++;
-        node.childrenAccept(this, data);
+        checkCondition(node,data,0);
+        node.childrenAccept(this,data);
         return null;
     }
 
     @Override
     public Object visit(ASTWhileStmt node, Object data) {
         WHILE++;
-        node.childrenAccept(this, data);
+        checkCondition(node,data,0);
+        node.childrenAccept(this,data);
         return null;
     }
 
@@ -198,17 +205,16 @@ public class SemantiqueVisitor implements ParserVisitor {
     public Object visit(ASTAssignStmt node, Object data) {
         String varName1 = ((ASTIdentifier) node.jjtGetChild(0)).getValue();
 
-        if(!symbolTable.containsKey(varName1))
-            throw new SemantiqueError("Invalid use of undefined Identifier "+varName1);
+        checkInvalidUseIdentifier(varName1);
 
+        DataStruct childInfo = goGetChildInfo(node,1);
 
-        Node expr = node.jjtGetChild(1);
-        DataStruct ds = new DataStruct();
-        expr.jjtAccept(this,ds);
-        if(ds.symbol != null){
-            if(!symbolTable.containsKey(ds.symbol))
-                throw new SemantiqueError("Invalid use of undefined Identifier "+ds.symbol);
+        if(childInfo.symbol != null){
+            checkInvalidUseIdentifier(childInfo.symbol);
+            if(childInfo.type==null) childInfo.type = symbolTable.get(childInfo.symbol);
         }
+
+        checkInvalidTypeAssignment(varName1,childInfo);
         return null;
     }
 
@@ -230,12 +236,36 @@ public class SemantiqueVisitor implements ParserVisitor {
         les opérateurs == et != peuvent être utilisé pour les nombres, les réels et les booléens, mais il faut que le type soit le même
         des deux côté de l'égalité/l'inégalité.
         */
-        node.childrenAccept(this,data);
+
+        //todo consider more then 2 child
         int nChild = node.jjtGetNumChildren();
-        if(nChild>1)
+    /*
+        if(nChild >0){
+            DataStruct ds1 = new DataStruct();
+            Node expr1 = node.jjtGetChild(0);
+            expr1.jjtAccept(this,ds1);
+        }
+
+    */
+        if(nChild>1){
+            /*
+            DataStruct ds2 = new DataStruct();
+            Node expr2 = node.jjtGetChild(1);
+            expr2.jjtAccept(this,ds2);
+
+            if(ds1.type != null && ds2.type != null)
+                if(ds1.type != ds2.type)
+                    throw new SemantiqueError("Invalid type in condition");*/
             OP += nChild-1;
+        }
 
-
+        //todo remove for individuel accept
+        node.childrenAccept(this,data);
+        if(nChild>1)
+            if(data!=null && data instanceof DataStruct){
+                ((DataStruct) data).type = VarType.bool;
+                ((DataStruct) data).symbol = null;
+            }
         return null;
     }
 
@@ -252,18 +282,13 @@ public class SemantiqueVisitor implements ParserVisitor {
     @Override
     public Object visit(ASTAddExpr node, Object data) {
         OP += node.getOps().size();
-
-
         node.childrenAccept(this, data);
         return null;
     }
 
     @Override
     public Object visit(ASTMulExpr node, Object data) {
-
         OP += node.getOps().size();
-
-
         node.childrenAccept(this, data);
         return null;
     }
@@ -271,8 +296,6 @@ public class SemantiqueVisitor implements ParserVisitor {
     @Override
     public Object visit(ASTBoolExpr node, Object data) {
         OP += node.getOps().size();
-
-
         node.childrenAccept(this,data);
         return null;
     }
@@ -319,25 +342,28 @@ public class SemantiqueVisitor implements ParserVisitor {
 
     @Override
     public Object visit(ASTBoolValue node, Object data) {
+        if(data!=null && data instanceof DataStruct) ((DataStruct) data).type= VarType.bool;
         node.childrenAccept(this, data);
         return null;
     }
 
     @Override
     public Object visit(ASTIdentifier node, Object data) {
-        if(data instanceof DataStruct) ((DataStruct) data).symbol= node.getValue();
+        if(data!=null && data instanceof DataStruct) ((DataStruct) data).symbol= node.getValue();
         node.childrenAccept(this, data);
         return null;
     }
 
     @Override
     public Object visit(ASTIntValue node, Object data) {
+        if(data!=null && data instanceof DataStruct) ((DataStruct) data).type= VarType.num;
         node.childrenAccept(this, data);
         return null;
     }
 
     @Override
     public Object visit(ASTRealValue node, Object data) {
+        if(data!=null && data instanceof DataStruct) ((DataStruct) data).type= VarType.real;
         node.childrenAccept(this, data);
         return null;
     }
@@ -363,4 +389,58 @@ public class SemantiqueVisitor implements ParserVisitor {
             type = p_type;
         }
     }
+
+    private void checkInvalidUseIdentifier(String varName){
+        if(!symbolTable.containsKey(varName))
+            throw new SemantiqueError("Invalid use of undefined Identifier "+varName);
+    }
+
+    private void checkInvalidDeclaration(String varName){
+        if(symbolTable.containsKey(varName))
+            throw new SemantiqueError("Invalid declaration... variable "+varName+" already exists");
+    }
+
+    private void checkInvalidTypeAssignment(String varNameFromChild1, DataStruct dsFromChild2){
+        if (dsFromChild2.type != symbolTable.get(varNameFromChild1))
+            throw new SemantiqueError("Invalid type in assignation of Identifier "+varNameFromChild1+"... was expecting "+symbolTable.get(varNameFromChild1).toString()+" but got "+dsFromChild2.type.toString());
+    }
+
+    private void checkCondition(Node node, Object data,int index){
+        DataStruct ds = goGetChildInfo(node,index);
+        if((ds.type != null && ds.type != VarType.bool) || (ds.symbol != null && symbolTable.get(ds.symbol) != VarType.bool))
+            throw new SemantiqueError("Invalid type in condition");
+    }
+
+    private DataStruct goGetChildInfo(Node node,int index){
+        Node expr = node.jjtGetChild(index);
+        DataStruct ds = new DataStruct();
+        expr.jjtAccept(this,ds);
+        return ds;
+    }
+
+    private void checkIfArrayType(String listVarName){
+        VarType listType = symbolTable.get(listVarName);
+        if(listType != VarType.listreal && listType != VarType.listnum && listType != VarType.listbool)
+            throw new SemantiqueError("Array type is required here...");
+    }
+
+    private void checkInvalidArrayAssignement(String itemVarName, String listVarName){
+        VarType itemType = symbolTable.get(itemVarName);
+        VarType listType = symbolTable.get(listVarName);
+        boolean isInvalid = false;
+        switch (itemType){
+            case num:
+                if (listType != VarType.listnum) isInvalid =true;
+                break;
+            case bool:
+                if (listType != VarType.listbool) isInvalid =true;
+                break;
+            case real:
+                if (listType != VarType.listreal) isInvalid =true;
+                break;
+        }
+        if(isInvalid)
+            throw new SemantiqueError("Array type "+listType.toString()+" is incompatible with declared variable of type "+itemType.toString()+"...");
+    }
+
 }
