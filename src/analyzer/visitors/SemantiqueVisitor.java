@@ -128,7 +128,6 @@ public class SemantiqueVisitor implements ParserVisitor {
 
     @Override
     public Object visit(ASTStmt node, Object data) {
-
         node.childrenAccept(this, data);
         return null;
     }
@@ -210,7 +209,6 @@ public class SemantiqueVisitor implements ParserVisitor {
         DataStruct childInfo = goGetChildInfo(node,1);
 
         if(childInfo.symbol != null){
-            checkInvalidUseIdentifier(childInfo.symbol);
             if(childInfo.type==null) childInfo.type = symbolTable.get(childInfo.symbol);
         }
 
@@ -221,7 +219,17 @@ public class SemantiqueVisitor implements ParserVisitor {
     @Override
     public Object visit(ASTExpr node, Object data) {
         //Il est normal que tous les noeuds jusqu'à expr retourne un type.
-        node.childrenAccept(this, data);
+        int nChild = node.jjtGetNumChildren();
+        if(nChild == 1){
+            if (data != null && data instanceof DataStruct) {
+                DataStruct child0Info = goGetChildInfo(node, 0);
+                ((DataStruct) data).type = child0Info.type;
+                ((DataStruct) data).symbol = child0Info.symbol;
+            }
+        }
+        else{
+            node.childrenAccept(this, data);
+        }
         return null;
     }
 
@@ -234,38 +242,25 @@ public class SemantiqueVisitor implements ParserVisitor {
 
         de plus, il n'est pas acceptable de faire des comparaisons de booleen avec les opérateur < > <= >=.
         les opérateurs == et != peuvent être utilisé pour les nombres, les réels et les booléens, mais il faut que le type soit le même
-        des deux côté de l'égalité/l'inégalité.
+        des deux côté de l'égalité/l'inégalité. //todo
         */
 
-        //todo consider more then 2 child
         int nChild = node.jjtGetNumChildren();
-    /*
-        if(nChild >0){
-            DataStruct ds1 = new DataStruct();
-            Node expr1 = node.jjtGetChild(0);
-            expr1.jjtAccept(this,ds1);
+        if(nChild == 1){
+            if (data != null && data instanceof DataStruct) {
+                DataStruct child0Info = goGetChildInfo(node, 0);
+                ((DataStruct) data).type = child0Info.type;
+                ((DataStruct) data).symbol = child0Info.symbol;
+            }
         }
-
-    */
-        if(nChild>1){
-            /*
-            DataStruct ds2 = new DataStruct();
-            Node expr2 = node.jjtGetChild(1);
-            expr2.jjtAccept(this,ds2);
-
-            if(ds1.type != null && ds2.type != null)
-                if(ds1.type != ds2.type)
-                    throw new SemantiqueError("Invalid type in condition");*/
+        else if(nChild>1) {
             OP += nChild-1;
-        }
-
-        //todo remove for individuel accept
-        node.childrenAccept(this,data);
-        if(nChild>1)
-            if(data!=null && data instanceof DataStruct){
+            node.childrenAccept(this,data);
+            if (data != null && data instanceof DataStruct) {
                 ((DataStruct) data).type = VarType.bool;
                 ((DataStruct) data).symbol = null;
             }
+        }
         return null;
     }
 
@@ -282,21 +277,51 @@ public class SemantiqueVisitor implements ParserVisitor {
     @Override
     public Object visit(ASTAddExpr node, Object data) {
         OP += node.getOps().size();
-        node.childrenAccept(this, data);
+        int nChild = node.jjtGetNumChildren();
+        if(nChild == 1){
+            if (data != null && data instanceof DataStruct) {
+                DataStruct child0Info = goGetChildInfo(node, 0);
+                ((DataStruct) data).type = child0Info.type;
+                ((DataStruct) data).symbol = child0Info.symbol;
+            }
+        }
+        else{
+            node.childrenAccept(this,data);
+        }
         return null;
     }
 
     @Override
     public Object visit(ASTMulExpr node, Object data) {
         OP += node.getOps().size();
-        node.childrenAccept(this, data);
+        int nChild = node.jjtGetNumChildren();
+        if(nChild == 1){
+            if (data != null && data instanceof DataStruct) {
+                DataStruct child0Info = goGetChildInfo(node, 0);
+                ((DataStruct) data).type = child0Info.type;
+                ((DataStruct) data).symbol = child0Info.symbol;
+            }
+        }
+        else{
+            node.childrenAccept(this,data);
+        }
         return null;
     }
 
     @Override
     public Object visit(ASTBoolExpr node, Object data) {
         OP += node.getOps().size();
-        node.childrenAccept(this,data);
+        int nChild = node.jjtGetNumChildren();
+        if(nChild == 1){
+            if (data != null && data instanceof DataStruct) {
+                DataStruct child0Info = goGetChildInfo(node, 0);
+                ((DataStruct) data).type = child0Info.type;
+                ((DataStruct) data).symbol = child0Info.symbol;
+            }
+        }
+        else{
+            node.childrenAccept(this,data);
+        }
         return null;
     }
 
@@ -316,15 +341,28 @@ public class SemantiqueVisitor implements ParserVisitor {
     @Override
     public Object visit(ASTNotExpr node, Object data) {
         OP += node.getOps().size();
-
-        node.childrenAccept(this,data);
+        if (data != null && data instanceof DataStruct) {
+            DataStruct child0Info = goGetChildInfo(node, 0);
+            ((DataStruct) data).type = child0Info.type;
+            ((DataStruct) data).symbol = child0Info.symbol;
+        }
+        else{
+            node.childrenAccept(this,data);
+        }
         return null;
     }
 
     @Override
     public Object visit(ASTUnaExpr node, Object data) {
         OP += node.getOps().size();
-        node.childrenAccept(this,data);
+        if (data != null && data instanceof DataStruct) {
+            DataStruct child0Info = goGetChildInfo(node, 0);
+            ((DataStruct) data).type = child0Info.type;
+            ((DataStruct) data).symbol = child0Info.symbol;
+        }
+        else{
+            node.childrenAccept(this,data);
+        }
         return null;
     }
 
@@ -349,7 +387,11 @@ public class SemantiqueVisitor implements ParserVisitor {
 
     @Override
     public Object visit(ASTIdentifier node, Object data) {
-        if(data!=null && data instanceof DataStruct) ((DataStruct) data).symbol= node.getValue();
+        if(data!=null && data instanceof DataStruct){
+            ((DataStruct) data).symbol = node.getValue();
+            checkInvalidUseIdentifier( ((DataStruct) data).symbol);
+            ((DataStruct) data).type = symbolTable.get(((DataStruct) data).symbol); //remove if doesnt work.
+        }
         node.childrenAccept(this, data);
         return null;
     }
