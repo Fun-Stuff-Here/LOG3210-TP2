@@ -228,7 +228,7 @@ public class SemantiqueVisitor implements ParserVisitor {
             }
         }
         else{
-            node.childrenAccept(this, data);
+            node.childrenAccept(this, data); //todo remove? ya tjrs 1 enfant.
         }
         return null;
     }
@@ -255,7 +255,16 @@ public class SemantiqueVisitor implements ParserVisitor {
         }
         else if(nChild>1) {
             OP += nChild-1;
-            node.childrenAccept(this,data);
+            String operator = node.getValue(); //todo multiple operators?
+            VarType child0Type = goGetChildInfo(node, 0).type;
+            VarType child1Type = goGetChildInfo(node, 1).type;
+            if((operator.equals(">") ||operator.equals("<") ||operator.equals(">=") ||operator.equals("<="))
+                && (child0Type == VarType.bool || child1Type == VarType.bool)){
+                throwInvalidTypeInExpr();
+            }
+            if(child0Type != child1Type){
+                throwInvalidTypeInExpr();
+            }
             if (data != null && data instanceof DataStruct) {
                 ((DataStruct) data).type = VarType.bool;
                 ((DataStruct) data).symbol = null;
@@ -308,15 +317,20 @@ public class SemantiqueVisitor implements ParserVisitor {
     public Object visit(ASTBoolExpr node, Object data) {
         OP += node.getOps().size();
         int nChild = node.jjtGetNumChildren();
-        if(nChild == 1){
-            if (data != null && data instanceof DataStruct) {
-                DataStruct child0Info = goGetChildInfo(node, 0);
-                ((DataStruct) data).type = child0Info.type;
-                ((DataStruct) data).symbol = child0Info.symbol;
+        DataStruct child0Info = goGetChildInfo(node, 0);
+        ((DataStruct) data).type = child0Info.type;
+        ((DataStruct) data).symbol = child0Info.symbol;
+        if(nChild > 1){
+            if(child0Info.type != VarType.bool){
+                throw new SemantiqueError("Invalid type in expression"); //todo change for method.
             }
-        }
-        else{
-            node.childrenAccept(this,data);
+            ((DataStruct) data).type = VarType.bool;
+            for (int i = 1; i < nChild; i++){
+                DataStruct ds = goGetChildInfo(node,i);
+                if(ds.type != null && ds.type != VarType.bool){
+                    throw new SemantiqueError("Invalid type in expression"); //todo change for method.
+                }
+            }
         }
         return null;
     }
