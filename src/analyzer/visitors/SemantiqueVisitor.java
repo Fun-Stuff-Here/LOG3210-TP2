@@ -277,16 +277,14 @@ public class SemantiqueVisitor implements ParserVisitor {
     @Override
     public Object visit(ASTAddExpr node, Object data) {
         OP += node.getOps().size();
-        int nChild = node.jjtGetNumChildren();
-        if(nChild == 1){
-            if (data != null && data instanceof DataStruct) {
-                DataStruct child0Info = goGetChildInfo(node, 0);
-                ((DataStruct) data).type = child0Info.type;
-                ((DataStruct) data).symbol = child0Info.symbol;
-            }
+        if (data != null && data instanceof DataStruct) {
+            DataStruct child0Info = goGetChildInfo(node, 0);
+            ((DataStruct) data).type = child0Info.type;
+            ((DataStruct) data).symbol = child0Info.symbol;
         }
-        else{
-            node.childrenAccept(this,data);
+        int nChild = node.jjtGetNumChildren();
+        for (int i = 1; i < nChild; i++){
+            checkInvalidMathTypes(node, ((DataStruct) data).type, i);
         }
         return null;
     }
@@ -294,16 +292,14 @@ public class SemantiqueVisitor implements ParserVisitor {
     @Override
     public Object visit(ASTMulExpr node, Object data) {
         OP += node.getOps().size();
-        int nChild = node.jjtGetNumChildren();
-        if(nChild == 1){
-            if (data != null && data instanceof DataStruct) {
-                DataStruct child0Info = goGetChildInfo(node, 0);
-                ((DataStruct) data).type = child0Info.type;
-                ((DataStruct) data).symbol = child0Info.symbol;
-            }
+        if (data != null && data instanceof DataStruct) {
+            DataStruct child0Info = goGetChildInfo(node, 0);
+            ((DataStruct) data).type = child0Info.type;
+            ((DataStruct) data).symbol = child0Info.symbol;
         }
-        else{
-            node.childrenAccept(this,data);
+        int nChild = node.jjtGetNumChildren();
+        for (int i = 1; i < nChild; i++){
+            checkInvalidMathTypes(node, ((DataStruct) data).type, i);
         }
         return null;
     }
@@ -343,10 +339,13 @@ public class SemantiqueVisitor implements ParserVisitor {
         OP += node.getOps().size();
         if (data != null && data instanceof DataStruct) {
             DataStruct child0Info = goGetChildInfo(node, 0);
+            if(node.getOps().size() > 0 && child0Info.type != VarType.bool){
+                throwInvalidTypeInExpr();
+            }
             ((DataStruct) data).type = child0Info.type;
             ((DataStruct) data).symbol = child0Info.symbol;
         }
-        else{
+        else{ //todo enlever le else? il ne devrait jamais avoir qqc sans type.
             node.childrenAccept(this,data);
         }
         return null;
@@ -357,10 +356,13 @@ public class SemantiqueVisitor implements ParserVisitor {
         OP += node.getOps().size();
         if (data != null && data instanceof DataStruct) {
             DataStruct child0Info = goGetChildInfo(node, 0);
+            if(node.getOps().size() > 0 && child0Info.type == VarType.bool){
+                throwInvalidTypeInExpr();
+            }
             ((DataStruct) data).type = child0Info.type;
             ((DataStruct) data).symbol = child0Info.symbol;
         }
-        else{
+        else{ //todo enlever le else? il ne devrait jamais avoir qqc sans type.
             node.childrenAccept(this,data);
         }
         return null;
@@ -370,7 +372,7 @@ public class SemantiqueVisitor implements ParserVisitor {
     les noeud ASTIdentifier aillant comme parent "GenValue" doivent vérifier leur type et vérifier leur existence.
 
     Ont peut envoyé une information a un enfant avec le 2e paramètre de jjtAccept ou childrenAccept.
-     */
+     */ //todo check c'est quoi ça??
     @Override
     public Object visit(ASTGenValue node, Object data) {
         node.childrenAccept(this, data);
@@ -447,7 +449,7 @@ public class SemantiqueVisitor implements ParserVisitor {
             throw new SemantiqueError("Invalid type in assignation of Identifier "+varNameFromChild1+"... was expecting "+symbolTable.get(varNameFromChild1).toString()+" but got "+dsFromChild2.type.toString());
     }
 
-    private void checkCondition(Node node, Object data,int index){
+    private void checkCondition(Node node, Object data, int index){ //todo enlever data? on s'en sert pas?
         DataStruct ds = goGetChildInfo(node,index);
         if((ds.type != null && ds.type != VarType.bool) || (ds.symbol != null && symbolTable.get(ds.symbol) != VarType.bool))
             throw new SemantiqueError("Invalid type in condition");
@@ -485,4 +487,15 @@ public class SemantiqueVisitor implements ParserVisitor {
             throw new SemantiqueError("Array type "+listType.toString()+" is incompatible with declared variable of type "+itemType.toString()+"...");
     }
 
+    //todo pt clean up pour que invalid type in expr soit juste 1x.
+    private void checkInvalidMathTypes(Node node, VarType type, int index){
+        DataStruct ds = goGetChildInfo(node,index);
+        if((ds.type != null) && (ds.type == VarType.bool || ds.type != type)){
+            throw new SemantiqueError("Invalid type in expression");
+        }
+    }
+
+    private void throwInvalidTypeInExpr(){
+        throw new SemantiqueError("Invalid type in expression");
+    }
 }
