@@ -114,6 +114,7 @@ public class SemantiqueVisitor implements ParserVisitor {
         }else if(typeName.equals("listreal")){
             type = VarType.listreal;
         }
+
         symbolTable.put(varName, type);
         node.childrenAccept(this,data);
         return null;
@@ -207,7 +208,6 @@ public class SemantiqueVisitor implements ParserVisitor {
         checkInvalidUseIdentifier(varName1);
 
         DataStruct childInfo = goGetChildInfo(node,1);
-
         if(childInfo.symbol != null){
             if(childInfo.type==null) childInfo.type = symbolTable.get(childInfo.symbol);
         }
@@ -219,16 +219,12 @@ public class SemantiqueVisitor implements ParserVisitor {
     @Override
     public Object visit(ASTExpr node, Object data) {
         //Il est normal que tous les noeuds jusqu'à expr retourne un type.
-        int nChild = node.jjtGetNumChildren();
-        if(nChild == 1){
+        if(node.jjtGetNumChildren() == 1){
             if (data != null && data instanceof DataStruct) {
                 DataStruct child0Info = goGetChildInfo(node, 0);
                 ((DataStruct) data).type = child0Info.type;
                 ((DataStruct) data).symbol = child0Info.symbol;
             }
-        }
-        else{
-            node.childrenAccept(this, data); //todo remove? ya tjrs 1 enfant.
         }
         return null;
     }
@@ -242,7 +238,7 @@ public class SemantiqueVisitor implements ParserVisitor {
 
         de plus, il n'est pas acceptable de faire des comparaisons de booleen avec les opérateur < > <= >=.
         les opérateurs == et != peuvent être utilisé pour les nombres, les réels et les booléens, mais il faut que le type soit le même
-        des deux côté de l'égalité/l'inégalité. //todo
+        des deux côté de l'égalité/l'inégalité.
         */
 
         int nChild = node.jjtGetNumChildren();
@@ -255,7 +251,7 @@ public class SemantiqueVisitor implements ParserVisitor {
         }
         else if(nChild>1) {
             OP += nChild-1;
-            String operator = node.getValue(); //todo multiple operators?
+            String operator = node.getValue();
             VarType child0Type = goGetChildInfo(node, 0).type;
             VarType child1Type = goGetChildInfo(node, 1).type;
             if((operator.equals(">") ||operator.equals("<") ||operator.equals(">=") ||operator.equals("<="))
@@ -265,10 +261,8 @@ public class SemantiqueVisitor implements ParserVisitor {
             if(child0Type != child1Type){
                 throwInvalidTypeInExpr();
             }
-            if (data != null && data instanceof DataStruct) {
-                ((DataStruct) data).type = VarType.bool;
-                ((DataStruct) data).symbol = null;
-            }
+            ((DataStruct) data).type = VarType.bool;
+            ((DataStruct) data).symbol = null;
         }
         return null;
     }
@@ -286,13 +280,10 @@ public class SemantiqueVisitor implements ParserVisitor {
     @Override
     public Object visit(ASTAddExpr node, Object data) {
         OP += node.getOps().size();
-        if (data != null && data instanceof DataStruct) {
-            DataStruct child0Info = goGetChildInfo(node, 0);
-            ((DataStruct) data).type = child0Info.type;
-            ((DataStruct) data).symbol = child0Info.symbol;
-        }
-        int nChild = node.jjtGetNumChildren();
-        for (int i = 1; i < nChild; i++){
+        DataStruct child0Info = goGetChildInfo(node, 0);
+        ((DataStruct) data).type = child0Info.type;
+        ((DataStruct) data).symbol = child0Info.symbol;
+        for (int i = 1; i < node.jjtGetNumChildren(); i++){
             checkInvalidMathTypes(node, ((DataStruct) data).type, i);
         }
         return null;
@@ -301,13 +292,10 @@ public class SemantiqueVisitor implements ParserVisitor {
     @Override
     public Object visit(ASTMulExpr node, Object data) {
         OP += node.getOps().size();
-        if (data != null && data instanceof DataStruct) {
-            DataStruct child0Info = goGetChildInfo(node, 0);
-            ((DataStruct) data).type = child0Info.type;
-            ((DataStruct) data).symbol = child0Info.symbol;
-        }
-        int nChild = node.jjtGetNumChildren();
-        for (int i = 1; i < nChild; i++){
+        DataStruct child0Info = goGetChildInfo(node, 0);
+        ((DataStruct) data).type = child0Info.type;
+        ((DataStruct) data).symbol = child0Info.symbol;
+        for (int i = 1; i < node.jjtGetNumChildren(); i++){
             checkInvalidMathTypes(node, ((DataStruct) data).type, i);
         }
         return null;
@@ -322,13 +310,13 @@ public class SemantiqueVisitor implements ParserVisitor {
         ((DataStruct) data).symbol = child0Info.symbol;
         if(nChild > 1){
             if(child0Info.type != VarType.bool){
-                throw new SemantiqueError("Invalid type in expression"); //todo change for method.
+                throwInvalidTypeInExpr();
             }
             ((DataStruct) data).type = VarType.bool;
             for (int i = 1; i < nChild; i++){
                 DataStruct ds = goGetChildInfo(node,i);
                 if(ds.type != null && ds.type != VarType.bool){
-                    throw new SemantiqueError("Invalid type in expression"); //todo change for method.
+                    throwInvalidTypeInExpr();
                 }
             }
         }
@@ -351,34 +339,24 @@ public class SemantiqueVisitor implements ParserVisitor {
     @Override
     public Object visit(ASTNotExpr node, Object data) {
         OP += node.getOps().size();
-        if (data != null && data instanceof DataStruct) {
-            DataStruct child0Info = goGetChildInfo(node, 0);
-            if(node.getOps().size() > 0 && child0Info.type != VarType.bool){
-                throwInvalidTypeInExpr();
-            }
-            ((DataStruct) data).type = child0Info.type;
-            ((DataStruct) data).symbol = child0Info.symbol;
+        DataStruct child0Info = goGetChildInfo(node, 0);
+        if(node.getOps().size() > 0 && child0Info.type != VarType.bool){
+            throwInvalidTypeInExpr();
         }
-        else{ //todo enlever le else? il ne devrait jamais avoir qqc sans type.
-            node.childrenAccept(this,data);
-        }
+        ((DataStruct) data).type = child0Info.type;
+        ((DataStruct) data).symbol = child0Info.symbol;
         return null;
     }
 
     @Override
     public Object visit(ASTUnaExpr node, Object data) {
         OP += node.getOps().size();
-        if (data != null && data instanceof DataStruct) {
-            DataStruct child0Info = goGetChildInfo(node, 0);
-            if(node.getOps().size() > 0 && child0Info.type == VarType.bool){
-                throwInvalidTypeInExpr();
-            }
-            ((DataStruct) data).type = child0Info.type;
-            ((DataStruct) data).symbol = child0Info.symbol;
+        DataStruct child0Info = goGetChildInfo(node, 0);
+        if(node.getOps().size() > 0 && child0Info.type == VarType.bool){
+            throwInvalidTypeInExpr();
         }
-        else{ //todo enlever le else? il ne devrait jamais avoir qqc sans type.
-            node.childrenAccept(this,data);
-        }
+        ((DataStruct) data).type = child0Info.type;
+        ((DataStruct) data).symbol = child0Info.symbol;
         return null;
     }
 
@@ -386,7 +364,7 @@ public class SemantiqueVisitor implements ParserVisitor {
     les noeud ASTIdentifier aillant comme parent "GenValue" doivent vérifier leur type et vérifier leur existence.
 
     Ont peut envoyé une information a un enfant avec le 2e paramètre de jjtAccept ou childrenAccept.
-     */ //todo check c'est quoi ça??
+     */
     @Override
     public Object visit(ASTGenValue node, Object data) {
         node.childrenAccept(this, data);
@@ -406,7 +384,7 @@ public class SemantiqueVisitor implements ParserVisitor {
         if(data!=null && data instanceof DataStruct){
             ((DataStruct) data).symbol = node.getValue();
             checkInvalidUseIdentifier( ((DataStruct) data).symbol);
-            ((DataStruct) data).type = symbolTable.get(((DataStruct) data).symbol); //remove if doesnt work.
+            ((DataStruct) data).type = symbolTable.get(((DataStruct) data).symbol);
         }
         node.childrenAccept(this, data);
         return null;
@@ -463,7 +441,7 @@ public class SemantiqueVisitor implements ParserVisitor {
             throw new SemantiqueError("Invalid type in assignation of Identifier "+varNameFromChild1+"... was expecting "+symbolTable.get(varNameFromChild1).toString()+" but got "+dsFromChild2.type.toString());
     }
 
-    private void checkCondition(Node node, Object data, int index){ //todo enlever data? on s'en sert pas?
+    private void checkCondition(Node node, Object data, int index){ //todo enlever "data" si on s'en sert pas?
         DataStruct ds = goGetChildInfo(node,index);
         if((ds.type != null && ds.type != VarType.bool) || (ds.symbol != null && symbolTable.get(ds.symbol) != VarType.bool))
             throw new SemantiqueError("Invalid type in condition");
@@ -501,11 +479,10 @@ public class SemantiqueVisitor implements ParserVisitor {
             throw new SemantiqueError("Array type "+listType.toString()+" is incompatible with declared variable of type "+itemType.toString()+"...");
     }
 
-    //todo pt clean up pour que invalid type in expr soit juste 1x.
     private void checkInvalidMathTypes(Node node, VarType type, int index){
         DataStruct ds = goGetChildInfo(node,index);
         if((ds.type != null) && (ds.type == VarType.bool || ds.type != type)){
-            throw new SemantiqueError("Invalid type in expression");
+            throwInvalidTypeInExpr();
         }
     }
 
