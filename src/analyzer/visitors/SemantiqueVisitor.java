@@ -164,7 +164,7 @@ public class SemantiqueVisitor implements ParserVisitor {
     @Override
     public Object visit(ASTForStmt node, Object data) {
         FOR++;
-        checkCondition(node,data,1);
+        checkCondition(node,1);
         node.childrenAccept(this, data);
         return null;
     }
@@ -184,7 +184,7 @@ public class SemantiqueVisitor implements ParserVisitor {
     @Override
     public Object visit(ASTIfStmt node, Object data) {
         IF++;
-        checkCondition(node,data,0);
+        checkCondition(node,0);
         node.childrenAccept(this,data);
         return null;
     }
@@ -192,7 +192,7 @@ public class SemantiqueVisitor implements ParserVisitor {
     @Override
     public Object visit(ASTWhileStmt node, Object data) {
         WHILE++;
-        checkCondition(node,data,0);
+        checkCondition(node,0);
         node.childrenAccept(this,data);
         return null;
     }
@@ -441,7 +441,7 @@ public class SemantiqueVisitor implements ParserVisitor {
             throw new SemantiqueError("Invalid type in assignation of Identifier "+varNameFromChild1+"... was expecting "+symbolTable.get(varNameFromChild1).toString()+" but got "+dsFromChild2.type.toString());
     }
 
-    private void checkCondition(Node node, Object data, int index){ //todo enlever "data" si on s'en sert pas?
+    private void checkCondition(Node node, int index){
         DataStruct ds = goGetChildInfo(node,index);
         if((ds.type != null && ds.type != VarType.bool) || (ds.symbol != null && symbolTable.get(ds.symbol) != VarType.bool))
             throw new SemantiqueError("Invalid type in condition");

@@ -20,4 +20,4 @@ class ASTForEachStmt extends SimpleNode {
     visitor.visit(this, data);
   }
 }
-/* JavaCC - OriginalChecksum=4b4a134b288e565c9a078b3d816902a9 (do not edit this line) */
+/* JavaCC - OriginalChecksum=6b93cda5f3d5b23194c3593a93761482 (do not edit this line) */
